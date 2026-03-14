@@ -53,6 +53,7 @@ router.get('/', async (req, res) => {
 });
 
 // ── GET /api/favorites/stats ───────────────────────────────────
+// NOTE: must stay above /:id so Express matches it as an exact route first
 router.get('/stats', async (req, res) => {
   try {
     const [total, stores, categories, storeList] = await Promise.all([
@@ -142,25 +143,30 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const { title, price, image_url, notes, category } = req.body;
 
+  // Build the SET clause dynamically so omitted fields are never touched.
+  // Using a static query with COALESCE would wipe notes when not provided.
+  const fields = [];
+  const params = [];
+  let i = 1;
+
+  if (title !== undefined)     { fields.push(`title = $${i++}`);     params.push(title || null); }
+  if (price !== undefined)     { fields.push(`price = $${i++}`);     params.push(price || null); }
+  if (image_url !== undefined) { fields.push(`image_url = $${i++}`); params.push(image_url || null); }
+  if (notes !== undefined)     { fields.push(`notes = $${i++}`);     params.push(notes || null); }
+  if (category !== undefined)  { fields.push(`category = $${i++}`);  params.push(category || null); }
+
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No fields provided to update.' });
+  }
+
+  params.push(req.params.id, req.userId);
+
   try {
     const result = await pool.query(
-      `UPDATE favorites SET
-        title     = COALESCE($1, title),
-        price     = COALESCE($2, price),
-        image_url = COALESCE($3, image_url),
-        notes     = $4,
-        category  = COALESCE($5, category)
-       WHERE id = $6 AND user_id = $7
+      `UPDATE favorites SET ${fields.join(', ')}
+       WHERE id = $${i} AND user_id = $${i + 1}
        RETURNING *`,
-      [
-        title || null,
-        price || null,
-        image_url || null,
-        notes !== undefined ? notes : null,
-        category || null,
-        req.params.id,
-        req.userId,
-      ]
+      params
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Favorite not found.' });
     res.json(result.rows[0]);
