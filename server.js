@@ -3,10 +3,11 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-const authRoutes = require('./routes/auth');
+const authRoutes      = require('./routes/auth');
 const favoritesRoutes = require('./routes/favorites');
+const { initSchema }  = require('./database');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
@@ -20,12 +21,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoritesRoutes);
 
-// Health check for the extension to verify connectivity
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0' });
 });
 
-// Serve dashboard for any non-API route (SPA fallback)
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
@@ -34,6 +33,16 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`FavoritesHub running at http://localhost:${PORT}`);
-});
+// Initialise schema first, then open the port.
+// This guarantees tables exist before any request can be served.
+(async () => {
+  try {
+    await initSchema();
+    app.listen(PORT, () => {
+      console.log(`FavoritesHub running at http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to initialise database schema:', err.message);
+    process.exit(1);
+  }
+})();

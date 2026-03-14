@@ -45,9 +45,5 @@ async function initSchema() {
   console.log('Database schema ready.');
 }
 
-initSchema().catch((err) => {
-  console.error('Failed to initialize database schema:', err.message);
-  process.exit(1);
-});
-
 module.exports = pool;
+module.exports.initSchema = initSchema;
