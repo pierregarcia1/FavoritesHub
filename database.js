@@ -1,50 +1,53 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
 
-const db = new Database(path.join(__dirname, 'favorites.db'));
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+async function initSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id          TEXT        PRIMARY KEY,
+      username    TEXT        UNIQUE NOT NULL,
+      email       TEXT        UNIQUE NOT NULL,
+      password_hash TEXT      NOT NULL,
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+    CREATE TABLE IF NOT EXISTS favorites (
+      id          TEXT        PRIMARY KEY,
+      user_id     TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title       TEXT        NOT NULL,
+      price       TEXT,
+      image_url   TEXT,
+      product_url TEXT        NOT NULL,
+      store       TEXT,
+      category    TEXT        DEFAULT 'Uncategorized',
+      notes       TEXT,
+      added_at    TIMESTAMPTZ DEFAULT NOW()
+    );
 
-  CREATE TABLE IF NOT EXISTS favorites (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    price TEXT,
-    image_url TEXT,
-    product_url TEXT NOT NULL,
-    store TEXT,
-    category TEXT DEFAULT 'Uncategorized',
-    notes TEXT,
-    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS collections (
+      id          TEXT        PRIMARY KEY,
+      user_id     TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name        TEXT        NOT NULL,
+      color       TEXT        DEFAULT '#6366f1',
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
 
-  CREATE TABLE IF NOT EXISTS collections (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    color TEXT DEFAULT '#6366f1',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS favorite_collections (
+      favorite_id   TEXT NOT NULL REFERENCES favorites(id) ON DELETE CASCADE,
+      collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+      PRIMARY KEY (favorite_id, collection_id)
+    );
+  `);
+  console.log('Database schema ready.');
+}
 
-  CREATE TABLE IF NOT EXISTS favorite_collections (
-    favorite_id TEXT NOT NULL,
-    collection_id TEXT NOT NULL,
-    PRIMARY KEY (favorite_id, collection_id),
-    FOREIGN KEY (favorite_id) REFERENCES favorites(id) ON DELETE CASCADE,
-    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
-  );
-`);
+initSchema().catch((err) => {
+  console.error('Failed to initialize database schema:', err.message);
+  process.exit(1);
+});
 
-module.exports = db;
+module.exports = pool;

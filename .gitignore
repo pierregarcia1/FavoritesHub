@@ -1,0 +1,4 @@
+.env
+node_modules/
+favorites.db
+*.db
