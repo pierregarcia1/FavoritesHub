@@ -1,0 +1,343 @@
+/* =========================================================
+   FavoritesHub Extension — Content Script Styles
+   All selectors are prefixed with #fhub- to avoid conflicts.
+   ========================================================= */
+
+#fhub-root {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 2147483647 !important;
+  width: 340px !important;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  box-sizing: border-box !important;
+  /* Slide in from bottom-right */
+  transform: translateY(120%) !important;
+  opacity: 0 !important;
+  transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.3s ease !important;
+  pointer-events: none !important;
+}
+
+#fhub-root.fhub-visible {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: all !important;
+}
+
+#fhub-card {
+  background: #16162a !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.15) !important;
+  overflow: hidden !important;
+  color: #e8e8f8 !important;
+}
+
+/* ── Header ── */
+#fhub-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 14px 16px 10px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+#fhub-logo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#fhub-logo-icon {
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+#fhub-logo-text {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  letter-spacing: -0.01em !important;
+}
+
+#fhub-close {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #8888aa !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.15s, color 0.15s !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+}
+
+#fhub-close:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e8e8f8 !important;
+}
+
+/* ── Prompt ── */
+#fhub-prompt {
+  margin: 0 !important;
+  padding: 10px 16px 0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #a0a0c0 !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* ── Product preview ── */
+#fhub-product {
+  display: flex !important;
+  gap: 10px !important;
+  align-items: flex-start !important;
+  padding: 10px 16px !important;
+  margin: 0 !important;
+}
+
+#fhub-img {
+  width: 64px !important;
+  height: 64px !important;
+  object-fit: cover !important;
+  border-radius: 8px !important;
+  flex-shrink: 0 !important;
+  background: #1a1a2e !important;
+  display: block !important;
+}
+
+#fhub-img-placeholder {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 8px !important;
+  background: #1a1a2e !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 24px !important;
+  flex-shrink: 0 !important;
+}
+
+#fhub-product-info {
+  min-width: 0 !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+#fhub-store-label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  color: #a5b4fc !important;
+  margin: 0 !important;
+}
+
+#fhub-title {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #e8e8f8 !important;
+  line-height: 1.4 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+}
+
+#fhub-price {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: #10b981 !important;
+  margin: 0 !important;
+}
+
+/* ── Fields ── */
+#fhub-fields {
+  padding: 0 16px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.fhub-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.fhub-label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  color: #6666aa !important;
+  margin: 0 !important;
+}
+
+.fhub-optional {
+  font-weight: 400 !important;
+  text-transform: none !important;
+  opacity: 0.7 !important;
+}
+
+.fhub-select,
+.fhub-textarea {
+  width: 100% !important;
+  background: #1a1a2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 8px !important;
+  color: #e8e8f8 !important;
+  font-size: 12px !important;
+  font-family: inherit !important;
+  padding: 7px 10px !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+  margin: 0 !important;
+}
+
+.fhub-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238888aa' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 8px center !important;
+  padding-right: 28px !important;
+  cursor: pointer !important;
+}
+
+.fhub-select option {
+  background: #16162a !important;
+  color: #e8e8f8 !important;
+}
+
+.fhub-select:focus,
+.fhub-textarea:focus {
+  border-color: rgba(99, 102, 241, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+.fhub-textarea {
+  resize: none !important;
+  height: 52px !important;
+}
+
+.fhub-textarea::placeholder {
+  color: #4a4a6a !important;
+}
+
+/* ── Actions ── */
+#fhub-actions {
+  display: flex !important;
+  gap: 8px !important;
+  padding: 4px 16px 14px !important;
+}
+
+.fhub-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  border: 1px solid transparent !important;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+
+.fhub-btn:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+}
+
+.fhub-btn-primary {
+  flex: 1 !important;
+  background: #6366f1 !important;
+  color: #fff !important;
+  border-color: #6366f1 !important;
+}
+
+.fhub-btn-primary:hover:not(:disabled) {
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+}
+
+.fhub-btn-ghost {
+  background: transparent !important;
+  color: #8888aa !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+.fhub-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #e8e8f8 !important;
+}
+
+/* ── Status ── */
+#fhub-status {
+  margin: 0 16px 14px !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+}
+
+.fhub-hidden {
+  display: none !important;
+}
+
+.fhub-status-success {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+}
+
+.fhub-status-error {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+
+.fhub-status-info {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: #a5b4fc !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+}
+
+/* ── Spinner ── */
+.fhub-spinner {
+  display: inline-block !important;
+  width: 11px !important;
+  height: 11px !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  border-top-color: #fff !important;
+  border-radius: 50% !important;
+  animation: fhub-spin 0.55s linear infinite !important;
+}
+
+@keyframes fhub-spin {
+  to { transform: rotate(360deg); }
+}

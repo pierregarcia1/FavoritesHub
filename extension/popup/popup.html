@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FavoritesHub</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">❤️</div>
+    <span class="logo-name">FavoritesHub</span>
+  </div>
+  <div class="status-dot" id="status-dot" title="Checking connection…"></div>
+</div>
+
+<!-- Main view (shown when configured) -->
+<div id="view-main" class="view hidden">
+  <div class="user-banner" id="user-banner">
+    <div class="user-banner-avatar" id="user-banner-avatar">?</div>
+    <div class="user-banner-info">
+      <div class="user-banner-name" id="user-banner-name">...</div>
+      <div class="user-banner-sub" id="user-banner-sub">Connected</div>
+    </div>
+    <a id="open-site-btn" href="#" target="_blank" class="btn btn-sm btn-ghost">Open ↗</a>
+  </div>
+
+  <div class="stats-row" id="stats-row">
+    <div class="stat-box">
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-label">Saved items</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-box">
+      <div class="stat-value" id="stat-stores">—</div>
+      <div class="stat-label">Stores</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-box">
+      <div class="stat-value" id="stat-cats">—</div>
+      <div class="stat-label">Categories</div>
+    </div>
+  </div>
+
+  <!-- Quick save current page -->
+  <div class="section">
+    <div class="section-label">Quick Save</div>
+    <div class="quick-save-card" id="quick-save-card">
+      <div class="quick-save-thumb" id="quick-thumb">🌐</div>
+      <div class="quick-save-info">
+        <div class="quick-save-title" id="quick-title">Loading page info…</div>
+        <div class="quick-save-url" id="quick-url"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" id="quick-save-btn">
+      ❤️ Save Current Page
+    </button>
+    <div id="quick-status" class="status-msg hidden"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section">
+    <button class="btn btn-ghost btn-sm btn-full" id="settings-toggle">
+      ⚙️ Settings
+    </button>
+  </div>
+</div>
+
+<!-- Setup / settings view -->
+<div id="view-setup" class="view">
+  <div class="setup-icon">🔑</div>
+  <p class="setup-title">Connect to FavoritesHub</p>
+  <p class="setup-sub">Paste your API token from the FavoritesHub website to enable saving.</p>
+
+  <div class="field">
+    <label class="field-label">Server URL</label>
+    <input class="field-input" type="url" id="server-url" placeholder="http://localhost:3000" />
+  </div>
+
+  <div class="field">
+    <label class="field-label">API Token</label>
+    <div style="position:relative;">
+      <input class="field-input" type="password" id="api-token" placeholder="Paste your token here…" />
+      <button class="toggle-pw" id="toggle-pw" title="Show/hide token">👁</button>
+    </div>
+    <p class="field-hint">
+      Get your token from FavoritesHub → click your username → <strong>API Token</strong>
+    </p>
+  </div>
+
+  <div id="setup-error" class="status-msg status-error hidden"></div>
+
+  <button class="btn btn-primary btn-full" id="save-settings-btn">
+    Connect
+  </button>
+
+  <button class="btn btn-ghost btn-sm btn-full" id="back-btn" style="margin-top:6px;">
+    ← Back
+  </button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

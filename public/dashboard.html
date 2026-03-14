@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FavoritesHub — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+
+<div class="app">
+  <!-- ===== TOP NAV ===== -->
+  <nav class="topnav">
+    <div class="topnav-logo">
+      <div class="topnav-logo-icon">❤️</div>
+      <span class="topnav-logo-name">FavoritesHub</span>
+    </div>
+
+    <div class="topnav-search">
+      <div class="input-wrapper">
+        <span class="input-icon">🔍</span>
+        <input
+          class="form-input"
+          type="search"
+          id="global-search"
+          placeholder="Search your favorites..."
+          oninput="debouncedSearch(this.value)"
+        />
+      </div>
+    </div>
+
+    <div class="topnav-actions">
+      <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+        + Add Item
+      </button>
+      <div class="user-chip" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="user-avatar-initials">?</div>
+        <span class="user-name" id="user-name-display">...</span>
+        <span style="color:var(--text-faint); font-size:0.8rem;">▾</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <span class="sidebar-section-label">Browse</span>
+    <button class="sidebar-item active" id="filter-all" onclick="setFilter('all')">
+      <span class="sidebar-item-icon">❤️</span>
+      All Favorites
+      <span class="sidebar-item-count" id="count-all">0</span>
+    </button>
+    <button class="sidebar-item" id="filter-recent" onclick="setFilter('recent')">
+      <span class="sidebar-item-icon">🕐</span>
+      Added Recently
+    </button>
+
+    <div class="sidebar-divider"></div>
+    <span class="sidebar-section-label">By Category</span>
+    <div id="category-filters"></div>
+
+    <div class="sidebar-divider"></div>
+    <span class="sidebar-section-label">By Store</span>
+    <div id="store-filters"></div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-stats" id="sidebar-stats">
+      <div class="sidebar-stats-title">Your Stats</div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-label">Total items</span>
+        <span class="sidebar-stat-value" id="stat-total">—</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-label">Stores</span>
+        <span class="sidebar-stat-value" id="stat-stores">—</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-label">Categories</span>
+        <span class="sidebar-stat-value" id="stat-categories">—</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+    <!-- Bulk action bar (hidden unless items are selected) -->
+    <div class="bulk-bar hidden" id="bulk-bar">
+      <span class="bulk-bar-text" id="bulk-count-text">0 items selected</span>
+      <div class="bulk-bar-actions">
+        <button class="btn btn-secondary btn-sm" onclick="clearSelection()">Deselect all</button>
+        <button class="btn btn-danger btn-sm" onclick="bulkDelete()">🗑 Delete selected</button>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="toolbar-title" id="toolbar-title">All Favorites</span>
+        <span class="badge badge-neutral" id="toolbar-count">0 items</span>
+      </div>
+      <div class="toolbar-right">
+        <select class="form-select" id="sort-select" onchange="applySort(this.value)" style="width:160px; padding:8px 36px 8px 12px;">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name_asc">Name A–Z</option>
+          <option value="name_desc">Name Z–A</option>
+          <option value="price_asc">Price: low to high</option>
+          <option value="price_desc">Price: high to low</option>
+        </select>
+        <div class="view-toggle">
+          <button class="btn-icon active" id="view-grid" title="Grid view" onclick="setView('grid')">⊞</button>
+          <button class="btn-icon" id="view-list" title="List view" onclick="setView('list')">≡</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Favorites content -->
+    <div class="favorites-container" id="favorites-container">
+      <div class="loading-overlay" id="loading-indicator">
+        <div class="spinner"></div>
+        Loading your favorites...
+      </div>
+      <div id="favorites-grid" class="favorites-grid"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ===== USER MENU DROPDOWN ===== -->
+<div id="user-menu" class="hidden" style="
+  position:fixed; top:56px; right:16px; z-index:500;
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:8px; min-width:180px;
+  box-shadow:var(--shadow);
+">
+  <div style="padding:10px 12px; border-bottom:1px solid var(--border); margin-bottom:6px;">
+    <div style="font-size:0.8rem; font-weight:700;" id="menu-username">...</div>
+    <div style="font-size:0.75rem; color:var(--text-faint);" id="menu-email">...</div>
+  </div>
+  <button class="sidebar-item" style="width:100%;" onclick="showApiToken()">
+    <span class="sidebar-item-icon">🔑</span> API Token
+  </button>
+  <button class="sidebar-item" style="width:100%; color:var(--danger);" onclick="logout()">
+    <span class="sidebar-item-icon">🚪</span> Sign Out
+  </button>
+</div>
+
+<!-- ===== ADD ITEM MODAL ===== -->
+<div class="modal-backdrop hidden" id="add-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <span class="modal-title">Add New Favorite</span>
+      <button class="modal-close" onclick="closeModal('add-modal')">×</button>
+    </div>
+    <form onsubmit="handleAddItem(event)">
+      <div class="form-group">
+        <label class="form-label">Product URL <span style="color:var(--danger)">*</span></label>
+        <input class="form-input" type="url" id="add-url" placeholder="https://www.amazon.com/..." required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Title <span style="color:var(--danger)">*</span></label>
+        <input class="form-input" type="text" id="add-title" placeholder="Product name" required />
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Price</label>
+          <input class="form-input" type="text" id="add-price" placeholder="$29.99" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Store</label>
+          <input class="form-input" type="text" id="add-store" placeholder="Amazon" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Image URL</label>
+        <input class="form-input" type="url" id="add-image" placeholder="https://..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="add-category">
+          <option value="Uncategorized">Uncategorized</option>
+          <option value="Electronics">Electronics</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Home & Garden">Home &amp; Garden</option>
+          <option value="Books">Books</option>
+          <option value="Toys & Games">Toys &amp; Games</option>
+          <option value="Sports">Sports</option>
+          <option value="Beauty">Beauty</option>
+          <option value="Food & Drink">Food &amp; Drink</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="add-notes" placeholder="Any notes about this item..."></textarea>
+      </div>
+      <div id="add-error" class="form-error hidden"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('add-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="add-submit-btn">Save to Favorites</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== EDIT ITEM MODAL ===== -->
+<div class="modal-backdrop hidden" id="edit-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <span class="modal-title">Edit Favorite</span>
+      <button class="modal-close" onclick="closeModal('edit-modal')">×</button>
+    </div>
+    <form onsubmit="handleEditItem(event)">
+      <input type="hidden" id="edit-id" />
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input class="form-input" type="text" id="edit-title" required />
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Price</label>
+          <input class="form-input" type="text" id="edit-price" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="edit-category">
+            <option value="Uncategorized">Uncategorized</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Home & Garden">Home &amp; Garden</option>
+            <option value="Books">Books</option>
+            <option value="Toys & Games">Toys &amp; Games</option>
+            <option value="Sports">Sports</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Food & Drink">Food &amp; Drink</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Image URL</label>
+        <input class="form-input" type="url" id="edit-image" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="edit-notes"></textarea>
+      </div>
+      <div id="edit-error" class="form-error hidden"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('edit-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div class="modal-backdrop hidden" id="detail-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <span class="modal-title">Item Details</span>
+      <button class="modal-close" onclick="closeModal('detail-modal')">×</button>
+    </div>
+    <div id="detail-content"></div>
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <a id="detail-visit-btn" href="#" target="_blank" class="btn btn-primary" style="flex:1;">
+        🛒 Visit Store
+      </a>
+      <button class="btn btn-secondary" id="detail-edit-btn">✏️ Edit</button>
+      <button class="btn btn-danger" id="detail-delete-btn">🗑</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== API TOKEN MODAL ===== -->
+<div class="modal-backdrop hidden" id="token-modal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <span class="modal-title">🔑 Your API Token</span>
+      <button class="modal-close" onclick="closeModal('token-modal')">×</button>
+    </div>
+    <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:16px;">
+      Copy this token into your browser extension settings so it can save items to your account.
+    </p>
+    <div style="
+      background:var(--bg-input);
+      border:1px solid var(--border);
+      border-radius:var(--radius-sm);
+      padding:12px 14px;
+      font-family:monospace;
+      font-size:0.78rem;
+      word-break:break-all;
+      color:var(--brand-light);
+      margin-bottom:14px;
+    " id="token-display"></div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="copyToken()">📋 Copy Token</button>
+      <button class="btn btn-secondary" onclick="closeModal('token-modal')">Close</button>
+    </div>
+    <p style="font-size:0.75rem; color:var(--text-faint); margin-top:12px; text-align:center;">
+      Keep this token secret. It grants full access to your favorites.
+    </p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>

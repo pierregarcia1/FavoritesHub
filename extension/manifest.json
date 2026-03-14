@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "FavoritesHub",
+  "version": "1.0.0",
+  "description": "Save products to your FavoritesHub list whenever you favorite an item while shopping.",
+
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://localhost:*/*", "https://localhost:*/*", "<all_urls>"],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "exclude_matches": ["http://localhost:3000/*"]
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "FavoritesHub",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

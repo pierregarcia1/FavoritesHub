@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FavoritesHub — Your Shopping Wishlist, Centralized</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+
+<div class="auth-page">
+  <!-- Left: Hero panel -->
+  <div class="auth-hero">
+    <div class="hero-logo">
+      <div class="hero-logo-icon">❤️</div>
+      <span class="hero-logo-name">FavoritesHub</span>
+    </div>
+
+    <h1 class="hero-headline">
+      Save anything,<br>
+      from <span class="highlight">everywhere</span>.
+    </h1>
+    <p class="hero-sub">
+      One place for all the things you love across the web.
+      Install our browser extension, hit like, and it's saved here instantly.
+    </p>
+
+    <div class="hero-features">
+      <div class="hero-feature">
+        <div class="hero-feature-icon">🛒</div>
+        <span>Works with Amazon, eBay, Etsy, and hundreds more stores</span>
+      </div>
+      <div class="hero-feature">
+        <div class="hero-feature-icon">⚡</div>
+        <span>One-click save via the browser extension</span>
+      </div>
+      <div class="hero-feature">
+        <div class="hero-feature-icon">🗂️</div>
+        <span>Organize with categories and notes</span>
+      </div>
+      <div class="hero-feature">
+        <div class="hero-feature-icon">🔍</div>
+        <span>Search and filter your entire collection</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Auth panel -->
+  <div class="auth-panel">
+    <div class="auth-box">
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-subtitle" id="auth-subtitle">Sign in to see your saved favorites.</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form class="auth-form active" id="form-login" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="input-wrapper">
+            <span class="input-icon">📧</span>
+            <input class="form-input" type="email" id="login-email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input class="form-input" type="password" id="login-password" placeholder="Your password" autocomplete="current-password" required />
+          </div>
+        </div>
+        <div id="login-error" class="form-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">
+          Sign In
+        </button>
+        <p style="text-align:center; margin-top:16px; font-size:0.85rem; color:var(--text-muted);">
+          Don't have an account?
+          <a href="#" onclick="switchTab('register'); return false;">Create one for free</a>
+        </p>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form class="auth-form" id="form-register" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input class="form-input" type="text" id="reg-username" placeholder="coolshopper" autocomplete="username" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="input-wrapper">
+            <span class="input-icon">📧</span>
+            <input class="form-input" type="email" id="reg-email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input class="form-input" type="password" id="reg-password" placeholder="Min. 6 characters" autocomplete="new-password" required />
+          </div>
+        </div>
+        <div id="reg-error" class="form-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="reg-btn">
+          Create Account
+        </button>
+        <p style="text-align:center; margin-top:16px; font-size:0.85rem; color:var(--text-muted);">
+          Already have an account?
+          <a href="#" onclick="switchTab('login'); return false;">Sign in</a>
+        </p>
+      </form>
+
+      <div class="divider">extension users</div>
+      <div style="text-align:center; font-size:0.82rem; color:var(--text-faint); line-height:1.6;">
+        Using our browser extension? Sign in above and your API token will automatically sync with the extension.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/js/auth.js"></script>
+</body>
+</html>
