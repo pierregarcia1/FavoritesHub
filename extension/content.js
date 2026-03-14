@@ -3,6 +3,42 @@
 
   if (window.location.hostname === 'localhost') return;
 
+  // ──────────────────────────────────────────────────────────────
+  // BLOCKLIST — never run on these domains
+  // ──────────────────────────────────────────────────────────────
+  const BLOCKED_HOSTS = [
+    /youtube\.com/i, /youtu\.be/i,
+    /google\./i, /gmail\.com/i, /docs\.google/i,
+    /facebook\.com/i, /instagram\.com/i, /twitter\.com/i, /x\.com/i,
+    /tiktok\.com/i, /snapchat\.com/i, /pinterest\.com/i, /reddit\.com/i,
+    /linkedin\.com/i, /discord\.com/i, /twitch\.tv/i,
+    /netflix\.com/i, /hulu\.com/i, /disneyplus\.com/i, /hbomax\.com/i,
+    /spotify\.com/i, /soundcloud\.com/i, /pandora\.com/i,
+    /github\.com/i, /gitlab\.com/i, /stackoverflow\.com/i,
+    /wikipedia\.org/i, /medium\.com/i,
+    /nytimes\.com/i, /cnn\.com/i, /bbc\.com/i,
+    /onrender\.com/i, /supabase\.co/i, /netlify\.app/i,
+  ];
+
+  if (BLOCKED_HOSTS.some((pattern) => pattern.test(window.location.hostname))) return;
+
+  // ──────────────────────────────────────────────────────────────
+  // ALLOWLIST — only use generic detection on known shopping domains
+  // On unknown sites, ONLY the MutationObserver (state-change) method runs.
+  // ──────────────────────────────────────────────────────────────
+  const SHOPPING_HOSTS = [
+    /amazon\./i, /ebay\./i, /etsy\./i, /target\./i, /walmart\./i,
+    /bestbuy\./i, /newegg\./i, /abercrombie\./i, /hollisterco\./i,
+    /hm\.com/i, /nike\./i, /asos\./i, /zara\./i, /nordstrom\./i,
+    /urbanoutfitters\./i, /forever21\./i, /gap\./i, /oldnavy\./i,
+    /macys\./i, /kohls\./i, /jcpenney\./i, /sephora\./i, /ulta\./i,
+    /wayfair\./i, /overstock\./i, /chewy\./i, /zappos\./i,
+    /adidas\./i, /underarmour\./i, /ralphlauren\./i, /calvinklein\./i,
+    /shop\./i, /store\./i, /shopify\./i,
+  ];
+
+  const isKnownShoppingSite = SHOPPING_HOSTS.some((p) => p.test(window.location.hostname));
+
   let dialogEl = null;
   let pendingData = null;
   let lastTriggerTime = 0;
@@ -356,7 +392,7 @@
     const config = getSiteConfig();
     let triggered = false;
 
-    // Check site-specific selectors first
+    // Check site-specific selectors first (always runs on configured sites)
     if (config) {
       for (const sel of config.buttonSelectors) {
         if (clicked.matches?.(sel) || clicked.closest?.(sel)) {
@@ -366,8 +402,8 @@
       }
     }
 
-    // Generic fallback — walk up 8 ancestors
-    if (!triggered) {
+    // Generic fallback — ONLY on known shopping sites to avoid false positives
+    if (!triggered && isKnownShoppingSite) {
       let node = clicked;
       for (let i = 0; i < 8; i++) {
         if (!node || node === document.body) break;
@@ -382,7 +418,6 @@
   // Use capture=true so we intercept even if the site calls stopPropagation
   document.addEventListener('click', handleClick, true);
   document.addEventListener('mousedown', handleClick, true);
-
   // ──────────────────────────────────────────────────────────────
   // METHOD 2: MUTATION OBSERVER
   // Watches for attribute changes that indicate a button was
