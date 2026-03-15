@@ -29,6 +29,11 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// Web Share Target — receives items shared from mobile browsers
+app.get('/share', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'share.html'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

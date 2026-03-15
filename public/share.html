@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#6366f1" />
+  <title>Save to FavoritesHub</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+
+    .share-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 20px;
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .share-header-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--brand), #f472b6);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+
+    .share-header-name {
+      font-size: 1rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--brand-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .share-body {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .share-prompt {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .share-product-card {
+      display: flex;
+      gap: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      align-items: flex-start;
+    }
+
+    .share-thumb {
+      width: 64px; height: 64px;
+      border-radius: 8px;
+      background: var(--bg-input);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+    }
+    .share-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .share-product-info { min-width: 0; flex: 1; }
+    .share-product-store {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--brand-light); margin-bottom: 4px;
+    }
+    .share-product-title {
+      font-size: 0.9rem; font-weight: 600; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .share-product-url {
+      font-size: 0.75rem; color: var(--text-faint); margin-top: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .share-footer {
+      padding: 16px 20px;
+      background: var(--bg-sidebar);
+      border-top: 1px solid var(--border);
+    }
+
+    /* Success / error states */
+    .share-result {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      text-align: center;
+      padding: 40px 20px;
+      flex: 1;
+    }
+    .share-result-icon { font-size: 3.5rem; }
+    .share-result-title { font-size: 1.2rem; font-weight: 800; }
+    .share-result-sub { font-size: 0.875rem; color: var(--text-muted); }
+
+    /* Not logged in */
+    #view-login {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; padding: 40px 20px; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="share-header">
+  <div class="share-header-icon">❤️</div>
+  <span class="share-header-name">FavoritesHub</span>
+</div>
+
+<!-- Not logged in -->
+<div id="view-login" class="hidden">
+  <div style="font-size:3rem;">🔒</div>
+  <div style="font-size:1.1rem; font-weight:800;">Sign in first</div>
+  <p style="font-size:0.875rem; color:var(--text-muted); max-width:280px;">
+    You need to be signed in to save items to FavoritesHub.
+  </p>
+  <a href="/" class="btn btn-primary btn-lg">Go to Sign In</a>
+</div>
+
+<!-- Save form -->
+<div id="view-save" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+  <div class="share-body">
+    <div class="share-prompt">Save this item?</div>
+
+    <div class="share-product-card">
+      <div class="share-thumb" id="share-thumb">🛍️</div>
+      <div class="share-product-info">
+        <div class="share-product-store" id="share-store"></div>
+        <div class="share-product-title" id="share-title"></div>
+        <div class="share-product-url" id="share-url-display"></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="share-category">
+        <option value="Uncategorized">Uncategorized</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Clothing">Clothing</option>
+        <option value="Home & Garden">Home &amp; Garden</option>
+        <option value="Books">Books</option>
+        <option value="Toys & Games">Toys &amp; Games</option>
+        <option value="Sports">Sports</option>
+        <option value="Beauty">Beauty</option>
+        <option value="Food & Drink">Food &amp; Drink</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notes <span style="font-weight:400; opacity:0.6;">(optional)</span></label>
+      <textarea class="form-textarea" id="share-notes" placeholder="Why do you like it?"></textarea>
+    </div>
+
+    <div id="share-error" class="hidden" style="
+      padding: 10px 14px; background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25); border-radius: 8px;
+      font-size: 0.875rem; color: #fca5a5;
+    "></div>
+  </div>
+
+  <div class="share-footer">
+    <button class="btn btn-primary btn-full btn-lg" id="share-save-btn">
+      ❤️ Save to FavoritesHub
+    </button>
+  </div>
+</div>
+
+<!-- Success -->
+<div id="view-success" class="hidden" style="flex:1; display:flex; flex-direction:column;">
+  <div class="share-result" style="flex:1;">
+    <div class="share-result-icon">✅</div>
+    <div class="share-result-title">Saved!</div>
+    <div class="share-result-sub">The item has been added to your FavoritesHub list.</div>
+  </div>
+  <div class="share-footer">
+    <a href="/dashboard" class="btn btn-primary btn-full btn-lg">View My Favorites</a>
+  </div>
+</div>
+
+<!-- Already saved -->
+<div id="view-duplicate" class="hidden" style="flex:1; display:flex; flex-direction:column;">
+  <div class="share-result" style="flex:1;">
+    <div class="share-result-icon">ℹ️</div>
+    <div class="share-result-title">Already saved!</div>
+    <div class="share-result-sub">This item is already in your FavoritesHub list.</div>
+  </div>
+  <div class="share-footer">
+    <a href="/dashboard" class="btn btn-primary btn-full btn-lg">View My Favorites</a>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/js/share.js"></script>
+</body>
+</html>

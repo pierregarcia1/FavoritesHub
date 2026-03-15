@@ -1,0 +1,33 @@
+{
+  "name": "FavoritesHub",
+  "short_name": "FavoritesHub",
+  "description": "Save shopping items from anywhere on the web.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0d0d14",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text":  "text",
+      "url":   "url"
+    }
+  }
+}

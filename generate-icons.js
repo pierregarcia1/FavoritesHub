@@ -94,11 +94,21 @@ function makePNG(size) {
   ]);
 }
 
-// ── Write the three sizes ─────────────────────────────────────
-const outDir = path.join(__dirname, 'extension', 'icons');
+// ── Extension icons (16, 48, 128) ────────────────────────────
+const extDir = path.join(__dirname, 'extension', 'icons');
 [16, 48, 128].forEach(size => {
-  const file = path.join(outDir, `icon${size}.png`);
+  const file = path.join(extDir, `icon${size}.png`);
   fs.writeFileSync(file, makePNG(size));
-  console.log(`✓  icon${size}.png`);
+  console.log(`✓  extension/icons/icon${size}.png`);
 });
-console.log('\nDone! Icons saved to extension/icons/');
+
+// ── PWA icons (192, 512) ──────────────────────────────────────
+const pwaDir = path.join(__dirname, 'public', 'icons');
+fs.mkdirSync(pwaDir, { recursive: true });
+[192, 512].forEach(size => {
+  const file = path.join(pwaDir, `icon${size}.png`);
+  fs.writeFileSync(file, makePNG(size));
+  console.log(`✓  public/icons/icon${size}.png`);
+});
+
+console.log('\nDone! All icons generated.');
