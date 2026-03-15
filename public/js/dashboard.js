@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initUserUI();
   loadFavorites();
   loadStats();
+  initMobileSetup();
   document.addEventListener('click', handleOutsideClick);
 });
 
@@ -224,14 +225,15 @@ function setFilter(filter) {
 }
 
 function setCategoryFilter(category) {
-  currentCategory = currentCategory === category ? null : category;
+  // null means "clear" (used by mobile drawer)
+  currentCategory = (category === null || currentCategory === category) ? null : category;
   currentStore = null;
   currentFilter = 'all';
 
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
   if (currentCategory) {
-    document.getElementById(`cat-${category}`)?.classList.add('active');
-    document.getElementById('toolbar-title').textContent = category;
+    document.getElementById(`cat-${currentCategory}`)?.classList.add('active');
+    document.getElementById('toolbar-title').textContent = currentCategory;
   } else {
     document.getElementById('filter-all')?.classList.add('active');
     document.getElementById('toolbar-title').textContent = 'All Favorites';
@@ -240,13 +242,14 @@ function setCategoryFilter(category) {
 }
 
 function setStoreFilter(store) {
-  currentStore = currentStore === store ? null : store;
+  // null means "clear" (used by mobile drawer)
+  currentStore = (store === null || currentStore === store) ? null : store;
   currentCategory = null;
   currentFilter = 'all';
 
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
   if (currentStore) {
-    document.getElementById('toolbar-title').textContent = store;
+    document.getElementById('toolbar-title').textContent = currentStore;
   } else {
     document.getElementById('filter-all')?.classList.add('active');
     document.getElementById('toolbar-title').textContent = 'All Favorites';
@@ -256,6 +259,11 @@ function setStoreFilter(store) {
 
 function applySort(value) {
   currentSort = value;
+  // Keep all sort selects in sync
+  ['sort-select', 'mobile-sort-select', 'drawer-sort'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
   loadFavorites();
 }
 
@@ -577,3 +585,169 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
+
+/* ===== MOBILE SETUP ===== */
+let pwaInstallPrompt = null;
+
+// Capture the install prompt before the browser discards it
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  pwaInstallPrompt = e;
+});
+
+function initMobileSetup() {
+  const isMobile    = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const isIos       = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isAndroid   = /Android/i.test(navigator.userAgent);
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const dismissed   = localStorage.getItem('fh_banner_dismissed');
+
+  // Sidebar button opens the modal
+  document.getElementById('mobile-setup-btn').addEventListener('click', openMobileModal);
+  document.getElementById('mobile-modal-close').addEventListener('click', () => closeModal('mobile-modal'));
+  document.getElementById('mobile-modal-close2').addEventListener('click', () => closeModal('mobile-modal'));
+
+  // Install buttons
+  document.getElementById('banner-install-btn').addEventListener('click', triggerInstall);
+  document.getElementById('modal-install-btn').addEventListener('click', triggerInstall);
+
+  // Banner dismiss
+  document.getElementById('banner-dismiss-btn').addEventListener('click', () => {
+    document.getElementById('mobile-banner').classList.add('hidden');
+    localStorage.setItem('fh_banner_dismissed', '1');
+  });
+
+  // Auto-show banner on mobile if not installed and not dismissed
+  if (isMobile && !isInstalled && !dismissed) {
+    document.getElementById('mobile-banner').classList.remove('hidden');
+  }
+}
+
+function openMobileModal() {
+  const isIos     = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isMobile  = isIos || isAndroid;
+
+  // Show the right step list
+  document.getElementById('steps-desktop').classList.toggle('hidden', isMobile);
+  document.getElementById('steps-android').classList.toggle('hidden', !isAndroid);
+  document.getElementById('steps-ios').classList.toggle('hidden', !isIos);
+
+  // Show install button only if the browser has an install prompt ready
+  document.getElementById('pwa-install-section').classList.toggle('hidden', !pwaInstallPrompt);
+
+  openModal('mobile-modal');
+}
+
+async function triggerInstall() {
+  if (!pwaInstallPrompt) return;
+  pwaInstallPrompt.prompt();
+  const { outcome } = await pwaInstallPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('mobile-banner').classList.add('hidden');
+    document.getElementById('pwa-install-section').classList.add('hidden');
+    pwaInstallPrompt = null;
+    showToast('FavoritesHub installed! 🎉', 'success');
+  }
+}
+
+/* ===== MOBILE NAV ===== */
+let mobileSearchVisible = false;
+
+function mobileNav(tab) {
+  // Update active state
+  ['all', 'search', 'filter', 'profile'].forEach(t => {
+    document.getElementById(`mnav-${t}`)?.classList.toggle('active', t === tab);
+  });
+
+  if (tab === 'all') {
+    hideMobileSearch();
+    setFilter('all');
+  } else if (tab === 'search') {
+    toggleMobileSearch();
+  } else if (tab === 'filter') {
+    openMobileFilterDrawer();
+  } else if (tab === 'profile') {
+    toggleUserMenu();
+  }
+}
+
+function toggleMobileSearch() {
+  const bar = document.getElementById('mobile-search-bar');
+  mobileSearchVisible = !mobileSearchVisible;
+  bar.style.display = mobileSearchVisible ? 'flex' : 'none';
+  if (mobileSearchVisible) {
+    document.getElementById('mobile-search').focus();
+  }
+}
+
+function hideMobileSearch() {
+  const bar = document.getElementById('mobile-search-bar');
+  bar.style.display = 'none';
+  mobileSearchVisible = false;
+}
+
+/* ===== MOBILE FILTER DRAWER ===== */
+let drawerCategories = [];
+let drawerStores = [];
+
+function openMobileFilterDrawer() {
+  populateDrawerFilters();
+  document.getElementById('filter-drawer-backdrop').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMobileFilterDrawer() {
+  document.getElementById('filter-drawer-backdrop').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function populateDrawerFilters() {
+  const catContainer   = document.getElementById('drawer-category-list');
+  const storeContainer = document.getElementById('drawer-store-list');
+
+  // Re-use cached data from allFavorites
+  const cats   = [...new Set(allFavorites.map(f => f.category).filter(Boolean))];
+  const stores = [...new Set(allFavorites.map(f => f.store).filter(Boolean))].slice(0, 12);
+
+  catContainer.innerHTML = '';
+  ['all', ...cats].forEach(cat => {
+    const chip = document.createElement('button');
+    chip.className = `filter-chip${(cat === 'all' ? !currentCategory : currentCategory === cat) ? ' active' : ''}`;
+    chip.textContent = cat === 'all' ? '✦ All' : cat;
+    chip.onclick = () => {
+      if (cat === 'all') { setCategoryFilter(null); } else { setCategoryFilter(cat); }
+      closeMobileFilterDrawer();
+    };
+    catContainer.appendChild(chip);
+  });
+
+  storeContainer.innerHTML = '';
+  ['all', ...stores].forEach(store => {
+    const chip = document.createElement('button');
+    chip.className = `filter-chip${(store === 'all' ? !currentStore : currentStore === store) ? ' active' : ''}`;
+    chip.textContent = store === 'all' ? '✦ All' : store;
+    chip.onclick = () => {
+      if (store === 'all') { setStoreFilter(null); } else { setStoreFilter(store); }
+      closeMobileFilterDrawer();
+    };
+    storeContainer.appendChild(chip);
+  });
+
+  // Sync drawer sort
+  document.getElementById('drawer-sort').value = currentSort;
+}
+
+// Close drawer on backdrop click
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filter-drawer-backdrop')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('filter-drawer-backdrop')) closeMobileFilterDrawer();
+  });
+  document.getElementById('filter-drawer-close')?.addEventListener('click', closeMobileFilterDrawer);
+
+  // Also sync the mobile search input with desktop search
+  const mobileSearch = document.getElementById('mobile-search');
+  if (mobileSearch) {
+    mobileSearch.addEventListener('input', e => debouncedSearch(e.target.value));
+  }
+});

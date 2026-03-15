@@ -67,6 +67,12 @@
     <div id="store-filters"></div>
 
     <div class="sidebar-divider"></div>
+    <button class="sidebar-item" id="mobile-setup-btn">
+      <span class="sidebar-item-icon">📱</span>
+      Get Mobile App
+    </button>
+
+    <div class="sidebar-divider"></div>
 
     <div class="sidebar-stats" id="sidebar-stats">
       <div class="sidebar-stats-title">Your Stats</div>
@@ -118,6 +124,24 @@
       </div>
     </div>
 
+    <!-- Mobile search bar (shown below topnav on small screens) -->
+    <div class="mobile-search-bar" id="mobile-search-bar">
+      <div class="input-wrapper" style="flex:1;">
+        <span class="input-icon">🔍</span>
+        <input class="form-input" type="search" id="mobile-search"
+          placeholder="Search favorites…" oninput="debouncedSearch(this.value)" />
+      </div>
+      <select class="form-select" id="mobile-sort-select" onchange="applySort(this.value)"
+        style="width:130px; padding:8px 28px 8px 10px; font-size:0.8rem;">
+        <option value="newest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="name_asc">A–Z</option>
+        <option value="name_desc">Z–A</option>
+        <option value="price_asc">$ Low</option>
+        <option value="price_desc">$ High</option>
+      </select>
+    </div>
+
     <!-- Favorites content -->
     <div class="favorites-container" id="favorites-container">
       <div class="loading-overlay" id="loading-indicator">
@@ -127,6 +151,62 @@
       <div id="favorites-grid" class="favorites-grid"></div>
     </div>
   </main>
+</div>
+
+<!-- ===== MOBILE BOTTOM NAV ===== -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-item active" id="mnav-all" onclick="mobileNav('all')">
+    <span class="mobile-nav-icon">❤️</span>
+    <span>All</span>
+  </button>
+  <button class="mobile-nav-item" id="mnav-search" onclick="mobileNav('search')">
+    <span class="mobile-nav-icon">🔍</span>
+    <span>Search</span>
+  </button>
+  <button class="mobile-nav-item mobile-nav-add" onclick="openAddModal()">
+    <span class="mobile-nav-icon">＋</span>
+    <span>Add</span>
+  </button>
+  <button class="mobile-nav-item" id="mnav-filter" onclick="openMobileFilterDrawer()">
+    <span class="mobile-nav-icon">🗂️</span>
+    <span>Filter</span>
+  </button>
+  <button class="mobile-nav-item" id="mnav-profile" onclick="toggleUserMenu()">
+    <span class="mobile-nav-icon">👤</span>
+    <span>Profile</span>
+  </button>
+</nav>
+
+<!-- ===== MOBILE FILTER DRAWER ===== -->
+<div class="drawer-backdrop hidden" id="filter-drawer-backdrop">
+  <div class="drawer" id="filter-drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">
+      <span class="drawer-title">Filter & Sort</span>
+      <button class="modal-close" id="filter-drawer-close">×</button>
+    </div>
+    <div class="drawer-body">
+      <div style="margin-bottom:16px;">
+        <div class="form-label" style="margin-bottom:8px;">Sort by</div>
+        <select class="form-select" id="drawer-sort" onchange="applySort(this.value)">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="name_asc">Name A–Z</option>
+          <option value="name_desc">Name Z–A</option>
+          <option value="price_asc">Price: low to high</option>
+          <option value="price_desc">Price: high to low</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div class="form-label" style="margin-bottom:8px;">Category</div>
+        <div id="drawer-category-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      </div>
+      <div>
+        <div class="form-label" style="margin-bottom:8px;">Store</div>
+        <div id="drawer-store-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== USER MENU DROPDOWN ===== -->
@@ -303,6 +383,132 @@
     <p style="font-size:0.75rem; color:var(--text-faint); margin-top:12px; text-align:center;">
       Keep this token secret. It grants full access to your favorites.
     </p>
+  </div>
+</div>
+
+<!-- ===== MOBILE INSTALL BANNER (auto-shows on mobile if not installed) ===== -->
+<div id="mobile-banner" class="hidden" style="
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  background: linear-gradient(135deg, #1e1e38, #16162a);
+  border-top: 1px solid rgba(99,102,241,0.3);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+">
+  <div style="font-size:2rem; flex-shrink:0;">📱</div>
+  <div style="flex:1; min-width:0;">
+    <div style="font-size:0.875rem; font-weight:700; margin-bottom:2px;">Install FavoritesHub</div>
+    <div style="font-size:0.78rem; color:var(--text-muted);">Add to home screen to save items with one tap</div>
+  </div>
+  <button id="banner-install-btn" class="btn btn-primary btn-sm" style="flex-shrink:0;">Install</button>
+  <button id="banner-dismiss-btn" style="
+    background:none; border:none; color:var(--text-faint);
+    font-size:1.4rem; cursor:pointer; padding:4px; flex-shrink:0;
+  ">×</button>
+</div>
+
+<!-- ===== MOBILE SETUP MODAL ===== -->
+<div class="modal-backdrop hidden" id="mobile-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <span class="modal-title">📱 Get the Mobile App</span>
+      <button class="modal-close" id="mobile-modal-close">×</button>
+    </div>
+
+    <!-- Install prompt button (Android only, hidden on iOS) -->
+    <div id="pwa-install-section" class="hidden" style="
+      background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(244,114,182,0.1));
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 14px;
+    ">
+      <div style="font-size:2.5rem; flex-shrink:0;">⚡</div>
+      <div style="flex:1;">
+        <div style="font-weight:700; margin-bottom:4px;">Install with one tap</div>
+        <div style="font-size:0.825rem; color:var(--text-muted);">Your browser supports direct installation.</div>
+      </div>
+      <button class="btn btn-primary" id="modal-install-btn">Install</button>
+    </div>
+
+    <!-- Steps -->
+    <div style="display:flex; flex-direction:column; gap:0;">
+
+      <!-- Android -->
+      <div id="steps-android" class="hidden">
+        <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-faint); margin-bottom:12px;">Android (Chrome)</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; background:var(--brand-glow); border:1px solid rgba(99,102,241,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:var(--brand-light); flex-shrink:0;">1</div>
+            <div style="padding-top:4px; font-size:0.875rem;">Open <strong>favoriteshub.onrender.com</strong> in Chrome on your phone</div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; background:var(--brand-glow); border:1px solid rgba(99,102,241,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:var(--brand-light); flex-shrink:0;">2</div>
+            <div style="padding-top:4px; font-size:0.875rem;">Tap the <strong>⋮ menu</strong> (top right) → <strong>"Add to Home screen"</strong></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; background:var(--brand-glow); border:1px solid rgba(99,102,241,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:var(--brand-light); flex-shrink:0;">3</div>
+            <div style="padding-top:4px; font-size:0.875rem;">When shopping, tap <strong>Share → FavoritesHub</strong> to save any item</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- iOS -->
+      <div id="steps-ios" class="hidden">
+        <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-faint); margin-bottom:12px;">iPhone / iPad (Safari)</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; background:var(--brand-glow); border:1px solid rgba(99,102,241,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:var(--brand-light); flex-shrink:0;">1</div>
+            <div style="padding-top:4px; font-size:0.875rem;">Open <strong>favoriteshub.onrender.com</strong> in <strong>Safari</strong> (must be Safari, not Chrome)</div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; background:var(--brand-glow); border:1px solid rgba(99,102,241,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:var(--brand-light); flex-shrink:0;">2</div>
+            <div style="padding-top:4px; font-size:0.875rem;">Tap the <strong>Share button ↑</strong> at the bottom → <strong>"Add to Home Screen"</strong></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; background:var(--brand-glow); border:1px solid rgba(99,102,241,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:var(--brand-light); flex-shrink:0;">3</div>
+            <div style="padding-top:4px; font-size:0.875rem;">When shopping, tap <strong>Share ↑ → FavoritesHub</strong> to save any item instantly</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop (non-mobile visitor) -->
+      <div id="steps-desktop">
+        <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-faint); margin-bottom:12px;">Setup on your phone</div>
+        <div style="
+          background:var(--bg-input); border:1px solid var(--border);
+          border-radius:var(--radius); padding:14px;
+          font-size:0.875rem; color:var(--text-muted); line-height:1.7;
+          margin-bottom:12px;
+        ">
+          Open this link on your phone:
+          <div style="margin-top:8px; font-family:monospace; font-size:0.8rem; color:var(--brand-light); word-break:break-all;">
+            https://favoriteshub.onrender.com
+          </div>
+        </div>
+        <p style="font-size:0.825rem; color:var(--text-muted); line-height:1.6;">
+          Then follow the steps for your device:<br>
+          <strong>Android (Chrome):</strong> ⋮ Menu → Add to Home Screen<br>
+          <strong>iPhone (Safari):</strong> Share ↑ → Add to Home Screen
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Share how-to -->
+    <div style="
+      margin-top:20px; padding:14px;
+      background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2);
+      border-radius:var(--radius);
+    ">
+      <div style="font-size:0.825rem; font-weight:700; color:#6ee7b7; margin-bottom:6px;">💡 Saving items on mobile</div>
+      <div style="font-size:0.825rem; color:var(--text-muted); line-height:1.6;">
+        Once installed, open any shopping page in your browser, tap <strong>Share</strong>, and select <strong>FavoritesHub</strong>. A save screen will appear instantly.
+      </div>
+    </div>
+
+    <button class="btn btn-secondary btn-full" style="margin-top:16px;" id="mobile-modal-close2">Got it</button>
   </div>
 </div>
 
