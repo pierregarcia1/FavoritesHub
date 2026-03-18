@@ -43,6 +43,9 @@
   let pendingData = null;
   let lastTriggerTime = 0;
 
+  // Tracks the in-flight "pending click" so it can be cancelled if a login wall appears.
+  let cancelPendingClick = null;
+
   // ──────────────────────────────────────────────────────────────
   // SITE-SPECIFIC CONFIGS
   // ──────────────────────────────────────────────────────────────
@@ -245,6 +248,17 @@
   const JUST_FAVORITED_PATTERN =
     /remove from (wish|fav|save|heart|watch|like|love|list)|added to (wish|fav|save|list)|wishlisted|favorited|saved|in your (list|wish)/i;
 
+  // Selectors that strongly indicate a login wall just appeared.
+  // We look for these inside a modal/overlay context after a click.
+  const LOGIN_MODAL_SELECTOR = [
+    '[class*="login-modal" i]', '[class*="signin-modal" i]', '[class*="auth-modal" i]',
+    '[id*="login-modal" i]', '[id*="signin-modal" i]',
+    '[data-testid*="login" i]', '[data-testid*="signin" i]',
+    '[aria-label*="sign in" i]', '[aria-label*="log in" i]', '[aria-label*="create account" i]',
+  ].join(',');
+
+  const LOGIN_URL_PATTERN = /\/(login|signin|sign[_-]in|auth|account\/login|accounts\/login)/i;
+
   // ── Helpers ───────────────────────────────────────────────────
   function getSiteConfig() {
     const hostname = window.location.hostname;
@@ -271,6 +285,42 @@
         : '',
     ];
     return GENERIC_FAVORITE_PATTERN.test(parts.join(' '));
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // LOGIN WALL & CONFIRMATION HELPERS
+  // ──────────────────────────────────────────────────────────────
+
+  // Returns true if the page is showing a login wall — either a URL redirect
+  // or a login modal that appeared in the DOM.
+  function isLoginWallVisible() {
+    if (LOGIN_URL_PATTERN.test(window.location.pathname + window.location.search)) return true;
+
+    const candidate = document.querySelector(LOGIN_MODAL_SELECTOR);
+    if (!candidate) return false;
+
+    // Only count it as a login wall if it sits inside a visible modal/overlay,
+    // not just a buried form somewhere on the page.
+    const modal = candidate.closest(
+      '[role="dialog"], [role="alertdialog"], .modal, .overlay, .popup, ' +
+      '[class*="modal"], [class*="overlay"], [class*="popup"], [class*="drawer"]'
+    );
+    return !!modal;
+  }
+
+  // Returns true if the element's current state indicates the item was favorited.
+  function isButtonFavorited(el) {
+    if (!el) return false;
+    const label   = (el.getAttribute('aria-label') || '').toLowerCase();
+    const pressed = el.getAttribute('aria-pressed');
+    const checked = el.getAttribute('aria-checked');
+    const cls     = typeof el.className === 'string' ? el.className : '';
+    return (
+      JUST_FAVORITED_PATTERN.test(label) ||
+      pressed === 'true' ||
+      checked === 'true' ||
+      /\b(is-saved|is-wishlisted|is-favorited|is-loved|saved|wishlisted|active)\b/i.test(cls)
+    );
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -386,37 +436,75 @@
 
   // ──────────────────────────────────────────────────────────────
   // METHOD 1: CLICK DETECTION (capture phase, fires before stopPropagation)
+  //
+  // Strategy: clicking a suspected favorite button opens a 1-second
+  // confirmation window instead of triggering the dialog immediately.
+  //
+  //  • If a login wall appears within that window  → cancel silently.
+  //  • If the button enters a "favorited" state   → trigger (fast path).
+  //  • The MutationObserver (Method 2) fires first for React-style apps
+  //    where state changes synchronously with the event.
+  //  • After 1 s with no login wall, the delayed check sees whether the
+  //    button is now favorited and triggers if so (covers deferred updates).
   // ──────────────────────────────────────────────────────────────
   function handleClick(event) {
     const clicked = event.target;
-    const config = getSiteConfig();
-    let triggered = false;
+    const config  = getSiteConfig();
+    let matchedEl = null;
 
     // Check site-specific selectors first (always runs on configured sites)
     if (config) {
       for (const sel of config.buttonSelectors) {
-        if (clicked.matches?.(sel) || clicked.closest?.(sel)) {
-          triggered = true;
-          break;
-        }
+        const el = clicked.matches?.(sel) ? clicked : clicked.closest?.(sel);
+        if (el) { matchedEl = el; break; }
       }
     }
 
     // Generic fallback — ONLY on known shopping sites to avoid false positives
-    if (!triggered && isKnownShoppingSite) {
+    if (!matchedEl && isKnownShoppingSite) {
       let node = clicked;
       for (let i = 0; i < 8; i++) {
         if (!node || node === document.body) break;
-        if (isLikelyFavoriteElement(node)) { triggered = true; break; }
+        if (isLikelyFavoriteElement(node)) { matchedEl = node; break; }
         node = node.parentElement;
       }
     }
 
-    if (triggered) triggerSave();
+    if (!matchedEl) return;
+
+    // Cancel any existing pending window before starting a new one.
+    if (cancelPendingClick) { cancelPendingClick(); cancelPendingClick = null; }
+
+    let cancelled = false;
+
+    // Early login-wall check at 350 ms (covers instant redirects / modal open).
+    const t1 = setTimeout(() => {
+      if (cancelled) return;
+      if (isLoginWallVisible()) { cancelled = true; cancelPendingClick = null; }
+    }, 350);
+
+    // Final confirmation at 1000 ms:
+    // If the button is now "favorited" and no login wall is showing → trigger.
+    // The MutationObserver will already have fired for synchronous state changes,
+    // so this only runs when the site delays its state update.
+    const t2 = setTimeout(() => {
+      if (cancelled) return;
+      cancelPendingClick = null;
+      if (!isLoginWallVisible() && isButtonFavorited(matchedEl)) {
+        triggerSave();
+      }
+    }, 1000);
+
+    cancelPendingClick = () => {
+      cancelled = true;
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }
 
-  // Use capture=true so we intercept even if the site calls stopPropagation
-  document.addEventListener('click', handleClick, true);
+  // capture=true so we intercept even if the site calls stopPropagation.
+  // mousedown covers React/framework buttons that swallow the click event.
+  document.addEventListener('click',     handleClick, true);
   document.addEventListener('mousedown', handleClick, true);
   // ──────────────────────────────────────────────────────────────
   // METHOD 2: MUTATION OBSERVER
