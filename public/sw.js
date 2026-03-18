@@ -1,8 +1,8 @@
 // FavoritesHub Service Worker
 // Required for PWA installation and the Web Share Target API.
 
-const CACHE = 'fhub-v1';
-const PRECACHE = ['/share', '/css/styles.css', '/icons/icon192.png'];
+const CACHE = 'fhub-v2';
+const PRECACHE = ['/share', '/manifest.json', '/css/styles.css', '/icons/icon192.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

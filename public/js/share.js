@@ -7,9 +7,14 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── Parse shared data from URL params ────────────────────────
-const params  = new URLSearchParams(window.location.search);
-const sharedUrl   = params.get('url')   || '';
-const sharedTitle = params.get('title') || params.get('text') || '';
+// Android apps may put the URL inside 'text' instead of 'url'.
+const params    = new URLSearchParams(window.location.search);
+const rawText   = params.get('text') || '';
+const urlInText = rawText.match(/https?:\/\/[^\s]+/)?.[0] || '';
+const sharedUrl   = params.get('url') || urlInText || '';
+// If the URL was extracted from 'text', strip it so the title is cleaner
+const sharedTitle = params.get('title') ||
+  (urlInText ? rawText.replace(urlInText, '').trim() : rawText) || '';
 
 // ── Extract store name from URL ───────────────────────────────
 function extractStore(url) {
@@ -41,8 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (!sharedUrl) {
-    // Nothing was shared — just go to dashboard
-    window.location.href = '/dashboard';
+    // Show the save form with a manual URL field if nothing was shared
+    document.getElementById('share-title').textContent = sharedTitle || 'No URL detected';
+    document.getElementById('share-store').textContent = 'Unknown';
+    document.getElementById('share-url-display').textContent =
+      'No URL was shared. Copy the page URL and paste it in notes.';
+    show('view-save');
     return;
   }
 

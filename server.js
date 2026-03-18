@@ -25,6 +25,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0' });
 });
 
+// Serve manifest with the correct MIME type Chrome requires for PWA recognition
+app.get('/manifest.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
+
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
