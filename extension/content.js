@@ -248,14 +248,10 @@
   const JUST_FAVORITED_PATTERN =
     /remove from (wish|fav|save|heart|watch|like|love|list)|added to (wish|fav|save|list)|wishlisted|favorited|saved|in your (list|wish)/i;
 
-  // Selectors that strongly indicate a login wall just appeared.
-  // We look for these inside a modal/overlay context after a click.
-  const LOGIN_MODAL_SELECTOR = [
-    '[class*="login-modal" i]', '[class*="signin-modal" i]', '[class*="auth-modal" i]',
-    '[id*="login-modal" i]', '[id*="signin-modal" i]',
-    '[data-testid*="login" i]', '[data-testid*="signin" i]',
-    '[aria-label*="sign in" i]', '[aria-label*="log in" i]', '[aria-label*="create account" i]',
-  ].join(',');
+  // Explicit named-modal selectors (low false-positive risk).
+  const LOGIN_MODAL_SELECTOR =
+    '[class*="login-modal"], [class*="signin-modal"], [class*="auth-modal"], ' +
+    '[id*="login-modal"], [id*="signin-modal"]';
 
   const LOGIN_URL_PATTERN = /\/(login|signin|sign[_-]in|auth|account\/login|accounts\/login)/i;
 
@@ -293,19 +289,33 @@
 
   // Returns true if the page is showing a login wall — either a URL redirect
   // or a login modal that appeared in the DOM.
+  //
+  // Detection strategy (ordered by reliability):
+  //  1. URL changed to a login path.
+  //  2. An ARIA dialog appeared that contains a password field — this is the
+  //     clearest signal and has near-zero false positives because legitimate
+  //     "favorited" confirmations never contain password inputs.
+  //  3. An element explicitly named as a login modal (class/id contains
+  //     "login-modal" or "signin-modal") appeared.
+  //
+  // Intentionally avoided: matching generic "Sign in" aria-labels or nav
+  // links, which are permanently present on every retail site.
   function isLoginWallVisible() {
     if (LOGIN_URL_PATTERN.test(window.location.pathname + window.location.search)) return true;
 
-    const candidate = document.querySelector(LOGIN_MODAL_SELECTOR);
-    if (!candidate) return false;
+    // Check every open ARIA dialog for a password / email input.
+    const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]');
+    for (const dlg of dialogs) {
+      if (
+        dlg.querySelector('input[type="password"]') ||
+        dlg.querySelector('input[type="email"], input[name*="email" i], input[name*="username" i]')
+      ) {
+        return true;
+      }
+    }
 
-    // Only count it as a login wall if it sits inside a visible modal/overlay,
-    // not just a buried form somewhere on the page.
-    const modal = candidate.closest(
-      '[role="dialog"], [role="alertdialog"], .modal, .overlay, .popup, ' +
-      '[class*="modal"], [class*="overlay"], [class*="popup"], [class*="drawer"]'
-    );
-    return !!modal;
+    // Fallback: explicitly named login/signin modal classes or IDs.
+    return !!document.querySelector(LOGIN_MODAL_SELECTOR);
   }
 
   // Returns true if the element's current state indicates the item was favorited.
@@ -319,7 +329,8 @@
       JUST_FAVORITED_PATTERN.test(label) ||
       pressed === 'true' ||
       checked === 'true' ||
-      /\b(is-saved|is-wishlisted|is-favorited|is-loved|saved|wishlisted|active)\b/i.test(cls)
+      // "active" intentionally excluded — too generic (used for hover/focus on any button)
+      /\b(is-saved|is-wishlisted|is-favorited|is-loved|saved|wishlisted)\b/i.test(cls)
     );
   }
 
