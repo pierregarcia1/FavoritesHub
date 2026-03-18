@@ -243,10 +243,12 @@
   const GENERIC_FAVORITE_PATTERN =
     /\b(wish|wishlist|fav|favourite|favorite|heart|save|bookmark|watchlist|watch|like|love|want)\b/i;
 
-  // Detects when a button's state changed TO "favorited"
-  // (aria-label now says "Remove from..." meaning the item was just added)
+  // Detects when a button's state changed TO "favorited".
+  // Covers two naming conventions sites use:
+  //  • Affirmative  — "Added to wishlist", "Saved", "Wishlisted"
+  //  • Toggle label — "Unfavourite", "Unlike", "Unsave" (means it IS now saved)
   const JUST_FAVORITED_PATTERN =
-    /remove from (wish|fav|save|heart|watch|like|love|list)|added to (wish|fav|save|list)|wishlisted|favorited|saved|in your (list|wish)/i;
+    /remove from (wish|fav|save|heart|watch|like|love|list)|added to (wish|fav|save|list)|wishlisted|favorited|saved|in your (list|wish)|un-?favou?rite|un-?like|un-?save|un-?watch/i;
 
   // Explicit named-modal selectors (low false-positive risk).
   const LOGIN_MODAL_SELECTOR =
@@ -486,6 +488,14 @@
     // Cancel any existing pending window before starting a new one.
     if (cancelPendingClick) { cancelPendingClick(); cancelPendingClick = null; }
 
+    // Snapshot the button's state NOW (before the site processes the click).
+    // We compare against this at 1 s to detect ANY label/state change, which
+    // is the fallback for sites like Nike that use unpredictable aria-label
+    // wording ("Unfavourite", "Unlike", etc.) we can't enumerate exhaustively.
+    const initialLabel   = matchedEl.getAttribute('aria-label') || '';
+    const initialPressed = matchedEl.getAttribute('aria-pressed') || '';
+    const initialChecked = matchedEl.getAttribute('aria-checked') || '';
+
     let cancelled = false;
 
     // Early login-wall check at 350 ms (covers instant redirects / modal open).
@@ -494,14 +504,21 @@
       if (isLoginWallVisible()) { cancelled = true; cancelPendingClick = null; }
     }, 350);
 
-    // Final confirmation at 1000 ms:
-    // If the button is now "favorited" and no login wall is showing → trigger.
-    // The MutationObserver will already have fired for synchronous state changes,
-    // so this only runs when the site delays its state update.
+    // Final confirmation at 1000 ms.
+    // Trigger if no login wall AND at least one of:
+    //  a) isButtonFavorited() — strong signal (aria-pressed=true, known class, etc.)
+    //  b) any attribute changed from its pre-click value — catches sites like Nike
+    //     where the label flips to "Unfavourite" (a word we can't exhaustively list)
     const t2 = setTimeout(() => {
       if (cancelled) return;
       cancelPendingClick = null;
-      if (!isLoginWallVisible() && isButtonFavorited(matchedEl)) {
+      if (isLoginWallVisible()) return;
+
+      const labelChanged   = matchedEl.getAttribute('aria-label')   !== initialLabel;
+      const pressedChanged = matchedEl.getAttribute('aria-pressed') !== initialPressed;
+      const checkedChanged = matchedEl.getAttribute('aria-checked') !== initialChecked;
+
+      if (isButtonFavorited(matchedEl) || labelChanged || pressedChanged || checkedChanged) {
         triggerSave();
       }
     }, 1000);
