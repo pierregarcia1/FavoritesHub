@@ -333,22 +333,6 @@
     return !!namedModal && isVisible(namedModal);
   }
 
-  // Returns true if the element's current state indicates the item was favorited.
-  function isButtonFavorited(el) {
-    if (!el) return false;
-    const label   = (el.getAttribute('aria-label') || '').toLowerCase();
-    const pressed = el.getAttribute('aria-pressed');
-    const checked = el.getAttribute('aria-checked');
-    const cls     = typeof el.className === 'string' ? el.className : '';
-    return (
-      JUST_FAVORITED_PATTERN.test(label) ||
-      pressed === 'true' ||
-      checked === 'true' ||
-      // "active" intentionally excluded — too generic (used for hover/focus on any button)
-      /\b(is-saved|is-wishlisted|is-favorited|is-loved|saved|wishlisted)\b/i.test(cls)
-    );
-  }
-
   // ──────────────────────────────────────────────────────────────
   // PRODUCT DATA EXTRACTION
   // ──────────────────────────────────────────────────────────────
@@ -463,22 +447,26 @@
   // ──────────────────────────────────────────────────────────────
   // METHOD 1: CLICK DETECTION (capture phase, fires before stopPropagation)
   //
-  // Strategy: clicking a suspected favorite button opens a 1-second
-  // confirmation window instead of triggering the dialog immediately.
+  // Strategy: open a 300 ms window after a suspected favorite click.
+  //   • If a visible login wall appears in that window → cancel silently.
+  //   • If no login wall → trigger the save dialog.
   //
-  //  • If a login wall appears within that window  → cancel silently.
-  //  • If the button enters a "favorited" state   → trigger (fast path).
-  //  • The MutationObserver (Method 2) fires first for React-style apps
-  //    where state changes synchronously with the event.
-  //  • After 1 s with no login wall, the delayed check sees whether the
-  //    button is now favorited and triggers if so (covers deferred updates).
+  // Why not confirm button state? React apps (Nike, Target, etc.) often
+  // UNMOUNT the clicked element and mount a new DOM node when state changes.
+  // Any reference captured at click time becomes stale immediately, making
+  // attribute comparisons unreliable. The login-wall check is the only
+  // signal we need: if the user is logged in, no modal appears; if not, it does.
+  //
+  // 300 ms is chosen because:
+  //   • SPA login modals render within one event-loop tick (< 50 ms).
+  //   • It feels instant to the user (below the 400 ms perception threshold).
   // ──────────────────────────────────────────────────────────────
   function handleClick(event) {
     const clicked = event.target;
     const config  = getSiteConfig();
     let matchedEl = null;
 
-    // Check site-specific selectors first (always runs on configured sites)
+    // Site-specific selectors — highest priority, runs on all configured sites.
     if (config) {
       for (const sel of config.buttonSelectors) {
         const el = clicked.matches?.(sel) ? clicked : clicked.closest?.(sel);
@@ -486,7 +474,7 @@
       }
     }
 
-    // Generic fallback — ONLY on known shopping sites to avoid false positives
+    // Generic fallback — restricted to known shopping sites to avoid noise.
     if (!matchedEl && isKnownShoppingSite) {
       let node = clicked;
       for (let i = 0; i < 8; i++) {
@@ -498,48 +486,21 @@
 
     if (!matchedEl) return;
 
-    // Cancel any existing pending window before starting a new one.
+    // Cancel any previous pending window.
     if (cancelPendingClick) { cancelPendingClick(); cancelPendingClick = null; }
-
-    // Snapshot the button's state NOW (before the site processes the click).
-    // We compare against this at 1 s to detect ANY label/state change, which
-    // is the fallback for sites like Nike that use unpredictable aria-label
-    // wording ("Unfavourite", "Unlike", etc.) we can't enumerate exhaustively.
-    const initialLabel   = matchedEl.getAttribute('aria-label') || '';
-    const initialPressed = matchedEl.getAttribute('aria-pressed') || '';
-    const initialChecked = matchedEl.getAttribute('aria-checked') || '';
 
     let cancelled = false;
 
-    // Early login-wall check at 350 ms (covers instant redirects / modal open).
-    const t1 = setTimeout(() => {
-      if (cancelled) return;
-      if (isLoginWallVisible()) { cancelled = true; cancelPendingClick = null; }
-    }, 350);
-
-    // Final confirmation at 1000 ms.
-    // Trigger if no login wall AND at least one of:
-    //  a) isButtonFavorited() — strong signal (aria-pressed=true, known class, etc.)
-    //  b) any attribute changed from its pre-click value — catches sites like Nike
-    //     where the label flips to "Unfavourite" (a word we can't exhaustively list)
-    const t2 = setTimeout(() => {
-      if (cancelled) return;
+    const timer = setTimeout(() => {
       cancelPendingClick = null;
-      if (isLoginWallVisible()) return;
-
-      const labelChanged   = matchedEl.getAttribute('aria-label')   !== initialLabel;
-      const pressedChanged = matchedEl.getAttribute('aria-pressed') !== initialPressed;
-      const checkedChanged = matchedEl.getAttribute('aria-checked') !== initialChecked;
-
-      if (isButtonFavorited(matchedEl) || labelChanged || pressedChanged || checkedChanged) {
+      if (!cancelled && !isLoginWallVisible()) {
         triggerSave();
       }
-    }, 1000);
+    }, 300);
 
     cancelPendingClick = () => {
       cancelled = true;
-      clearTimeout(t1);
-      clearTimeout(t2);
+      clearTimeout(timer);
     };
   }
 
@@ -558,10 +519,16 @@
       const el = mutation.target;
       if (!el || el === dialogEl) continue;
 
-      // aria-label changed — check if it now says "remove from ..." (meaning just added)
+      // aria-label changed — check if the new value signals "now favorited".
+      // Also accept if the OLD label matched the generic favorite pattern,
+      // because "Unfavourite this product" has no \b word boundary before
+      // "favourite" and would fail isLikelyFavoriteElement on the new label.
       if (mutation.attributeName === 'aria-label') {
-        const label = el.getAttribute('aria-label') || '';
-        if (JUST_FAVORITED_PATTERN.test(label) && isLikelyFavoriteElement(el)) {
+        const newLabel = el.getAttribute('aria-label') || '';
+        const oldLabel = mutation.oldValue || '';
+        const isFavoriteBtn = isLikelyFavoriteElement(el) ||
+                              GENERIC_FAVORITE_PATTERN.test(oldLabel);
+        if (JUST_FAVORITED_PATTERN.test(newLabel) && isFavoriteBtn) {
           triggerSave();
           return;
         }
