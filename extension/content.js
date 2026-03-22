@@ -289,25 +289,37 @@
   // LOGIN WALL & CONFIRMATION HELPERS
   // ──────────────────────────────────────────────────────────────
 
-  // Returns true if the page is showing a login wall — either a URL redirect
-  // or a login modal that appeared in the DOM.
+  // Returns true if an element is visually rendered on screen.
+  // SPAs keep modals in the DOM permanently and toggle CSS — we must
+  // check actual visibility, not just DOM presence.
+  function isVisible(el) {
+    if (!el) return false;
+    // aria-hidden="true" is the standard way SPAs hide inactive modals.
+    if (el.getAttribute('aria-hidden') === 'true') return false;
+    // display:none collapses the bounding rect to zero.
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return false;
+    // Final computed-style check for visibility/opacity CSS hiding.
+    const style = window.getComputedStyle(el);
+    return style.display !== 'none' &&
+           style.visibility !== 'hidden' &&
+           style.opacity !== '0';
+  }
+
+  // Returns true if a login wall is currently visible — either a full-page
+  // redirect or a modal that is actually rendered on screen right now.
   //
-  // Detection strategy (ordered by reliability):
-  //  1. URL changed to a login path.
-  //  2. An ARIA dialog appeared that contains a password field — this is the
-  //     clearest signal and has near-zero false positives because legitimate
-  //     "favorited" confirmations never contain password inputs.
-  //  3. An element explicitly named as a login modal (class/id contains
-  //     "login-modal" or "signin-modal") appeared.
-  //
-  // Intentionally avoided: matching generic "Sign in" aria-labels or nav
-  // links, which are permanently present on every retail site.
+  // IMPORTANT: Modern SPAs pre-render login modals in the DOM at all times
+  // and toggle CSS to show/hide them. Checking DOM presence alone (without
+  // isVisible()) would cause false positives on every page load, cancelling
+  // every click before it fires — which was the root cause of this bug.
   function isLoginWallVisible() {
     if (LOGIN_URL_PATTERN.test(window.location.pathname + window.location.search)) return true;
 
-    // Check every open ARIA dialog for a password / email input.
+    // Check every ARIA dialog that is actually visible on screen.
     const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]');
     for (const dlg of dialogs) {
+      if (!isVisible(dlg)) continue;
       if (
         dlg.querySelector('input[type="password"]') ||
         dlg.querySelector('input[type="email"], input[name*="email" i], input[name*="username" i]')
@@ -316,8 +328,9 @@
       }
     }
 
-    // Fallback: explicitly named login/signin modal classes or IDs.
-    return !!document.querySelector(LOGIN_MODAL_SELECTOR);
+    // Fallback: explicitly named login/signin modal that is visible.
+    const namedModal = document.querySelector(LOGIN_MODAL_SELECTOR);
+    return !!namedModal && isVisible(namedModal);
   }
 
   // Returns true if the element's current state indicates the item was favorited.
