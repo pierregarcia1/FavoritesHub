@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Save products to your FavoritesHub list whenever you favorite an item while shopping.",
 
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["http://localhost:*/*", "https://localhost:*/*", "<all_urls>"],
 
   "background": {

@@ -224,12 +224,63 @@ async function quickSave() {
     return;
   }
 
-  // Ask the content script for rich page data (OG image, price, exact title, store).
-  // Falls back gracefully if the content script isn't available (e.g. internal pages).
+  // Inject a small extraction function directly into the tab to read OG image,
+  // price, and title from the live DOM. More reliable than message-passing to
+  // the content script, which may not have loaded yet or may have exited early.
   let pageData = null;
   try {
-    pageData = await chrome.tabs.sendMessage(tab.id, { action: 'extractPageData' });
-  } catch { /* content script not injected on this tab — use fallback values */ }
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const meta = (prop) =>
+          document.querySelector(`meta[property="${prop}"]`)?.content ||
+          document.querySelector(`meta[name="${prop}"]`)?.content ||
+          null;
+
+        // ── Image ──────────────────────────────────────────────────
+        const image_url = meta('og:image') || meta('twitter:image') || null;
+
+        // ── Price ──────────────────────────────────────────────────
+        let price = null;
+
+        // 1. Schema.org itemprop
+        const priceEl = document.querySelector('[itemprop="price"]');
+        if (priceEl) price = priceEl.getAttribute('content') || priceEl.textContent?.trim();
+
+        // 2. JSON-LD Product offers
+        if (!price) {
+          for (const el of document.querySelectorAll('script[type="application/ld+json"]')) {
+            try {
+              const data = JSON.parse(el.textContent);
+              const nodes = Array.isArray(data) ? data : [data];
+              const product = nodes.find((n) => n?.['@type'] === 'Product');
+              if (product?.offers) {
+                const offer = Array.isArray(product.offers) ? product.offers[0] : product.offers;
+                const amt = offer?.price;
+                if (amt != null) {
+                  const sym = offer?.priceCurrency === 'USD' ? '$' : (offer?.priceCurrency || '$') + ' ';
+                  price = sym + amt;
+                  break;
+                }
+              }
+            } catch { /* malformed JSON-LD */ }
+          }
+        }
+
+        // 3. OG price
+        if (!price) {
+          const ogAmt = meta('og:price:amount');
+          if (ogAmt) price = '$' + ogAmt;
+        }
+
+        // ── Title ──────────────────────────────────────────────────
+        const title = meta('og:title') || meta('twitter:title') || document.title || null;
+
+        return { image_url, price, title };
+      },
+    });
+    pageData = result?.result ?? null;
+  } catch { /* tab is a chrome:// page or other restricted URL — pageData stays null */ }
 
   // Derive store name from URL if content script didn't provide one.
   let store = pageData?.store;
