@@ -714,4 +714,17 @@
     el.textContent = message;
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // POPUP MESSAGE HANDLER
+  // Lets the popup's "Save Current Page" button request rich page
+  // data (title, price, OG image, store) from the content script
+  // instead of relying on the low-resolution browser favicon.
+  // ──────────────────────────────────────────────────────────────
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.action === 'extractPageData') {
+      sendResponse(extractProductData());
+    }
+    return false;
+  });
+
 })();

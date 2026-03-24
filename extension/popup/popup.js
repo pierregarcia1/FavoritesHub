@@ -187,20 +187,23 @@ async function loadCurrentTab() {
   if (!tab) return;
 
   const titleEl = document.getElementById('quick-title');
-  const urlEl = document.getElementById('quick-url');
+  const urlEl   = document.getElementById('quick-url');
   const thumbEl = document.getElementById('quick-thumb');
 
   titleEl.textContent = tab.title || 'Untitled page';
+
+  let hostname = '';
   try {
-    const url = new URL(tab.url);
-    urlEl.textContent = url.hostname.replace('www.', '');
+    hostname = new URL(tab.url).hostname.replace('www.', '');
+    urlEl.textContent = hostname;
   } catch {
     urlEl.textContent = tab.url;
   }
 
-  // Try to get favicon
-  if (tab.favIconUrl) {
-    thumbEl.innerHTML = `<img src="${tab.favIconUrl}" alt="" onerror="this.parentElement.textContent='🌐'" />`;
+  // Google's favicon service at 64 px — much crisper than tab.favIconUrl (16 px).
+  if (hostname) {
+    const src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+    thumbEl.innerHTML = `<img src="${src}" alt="" style="width:36px;height:36px;border-radius:6px;object-fit:contain;" onerror="this.parentElement.textContent='🌐'" />`;
   }
 }
 
@@ -221,24 +224,37 @@ async function quickSave() {
     return;
   }
 
-  let hostname;
+  // Ask the content script for rich page data (OG image, price, exact title, store).
+  // Falls back gracefully if the content script isn't available (e.g. internal pages).
+  let pageData = null;
   try {
-    hostname = new URL(tab.url).hostname.replace('www.', '');
-    const parts = hostname.split('.');
-    hostname = parts.length >= 2 ? parts[parts.length - 2] : hostname;
-    hostname = hostname.charAt(0).toUpperCase() + hostname.slice(1);
-  } catch {
-    hostname = 'Unknown';
+    pageData = await chrome.tabs.sendMessage(tab.id, { action: 'extractPageData' });
+  } catch { /* content script not injected on this tab — use fallback values */ }
+
+  // Derive store name from URL if content script didn't provide one.
+  let store = pageData?.store;
+  if (!store) {
+    try {
+      const hostname = new URL(tab.url).hostname.replace('www.', '');
+      const parts    = hostname.split('.');
+      const name     = parts.length >= 2 ? parts[parts.length - 2] : hostname;
+      store = name.charAt(0).toUpperCase() + name.slice(1);
+    } catch {
+      store = 'Unknown';
+    }
   }
 
   const result = await sendMessage({
     action: 'saveFavorite',
     data: {
-      title: tab.title || 'Untitled',
+      title:       pageData?.title       || tab.title || 'Untitled',
       product_url: tab.url,
-      store: hostname,
-      image_url: tab.favIconUrl || null,
-      category: 'Uncategorized',
+      store,
+      // Use the real OG / product image when available.
+      // Never use tab.favIconUrl — it's 16 px and renders pixelated on the dashboard.
+      image_url:   pageData?.image_url   || null,
+      price:       pageData?.price       || null,
+      category:    'Uncategorized',
     },
   });
 
