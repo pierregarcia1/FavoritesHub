@@ -243,11 +243,20 @@ async function quickSave() {
         // ── Price ──────────────────────────────────────────────────
         let price = null;
 
-        // 1. Schema.org itemprop
-        const priceEl = document.querySelector('[itemprop="price"]');
-        if (priceEl) price = priceEl.getAttribute('content') || priceEl.textContent?.trim();
+        // Helper: get trimmed text or content-attr value from first match
+        const getText = (sel) => {
+          try {
+            const el = document.querySelector(sel);
+            if (!el) return null;
+            const val = (el.getAttribute('content') || el.textContent || '').replace(/\s+/g, ' ').trim();
+            return val || null;
+          } catch { return null; }
+        };
 
-        // 2. JSON-LD Product offers
+        // 1. Schema.org itemprop (handles both content-attr and text)
+        price = getText('[itemprop="price"]');
+
+        // 2. JSON-LD Product.offers
         if (!price) {
           for (const el of document.querySelectorAll('script[type="application/ld+json"]')) {
             try {
@@ -267,10 +276,54 @@ async function quickSave() {
           }
         }
 
-        // 3. OG price
+        // 3. OG price meta
         if (!price) {
           const ogAmt = meta('og:price:amount');
           if (ogAmt) price = '$' + ogAmt;
+        }
+
+        // 4. Site-specific and widely-used CSS selectors.
+        //    Each candidate must contain at least one digit to be considered a price.
+        if (!price) {
+          const priceSelectors = [
+            // Amazon
+            '.a-price:first-of-type .a-offscreen', '#priceblock_ourprice', '#priceblock_dealprice',
+            // eBay
+            '.x-price-primary .ux-textspans', '#prcIsum',
+            // Etsy
+            '[data-selector="price-only"] .currency-value',
+            // Target
+            '[data-test="product-price"]',
+            // Walmart
+            '.price-characteristic',
+            // Best Buy
+            '.priceView-customer-price span:first-child',
+            // Abercrombie / Hollister
+            '[data-auto-id="product-price"]',
+            // H&M
+            '[class*="price-value"]',
+            // Nike
+            '[data-testid="currentPrice-container"]',
+            // ASOS
+            '[data-testid="current-price"] span',
+            // Zara
+            '.price__amount',
+            // Newegg
+            '.price-current strong',
+            // Urban Outfitters
+            '[data-qa="product-price"]',
+            // Generic data attributes (works on many Shopify / custom stores)
+            '[data-testid*="price"]', '[data-test*="price"]',
+            '[data-price]',
+            // Generic class patterns
+            '[class*="product-price"]', '[class*="sale-price"]',
+            '[class*="current-price"]', '[class*="selling-price"]',
+            '[class*="offer-price"]',
+          ];
+          for (const sel of priceSelectors) {
+            const text = getText(sel);
+            if (text && /\d/.test(text)) { price = text; break; }
+          }
         }
 
         // ── Title ──────────────────────────────────────────────────
