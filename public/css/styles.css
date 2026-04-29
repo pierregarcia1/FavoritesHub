@@ -633,10 +633,14 @@ button, input, select, textarea { font-family: inherit; }
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
 }
 
 .favorites-grid {
   display: grid;
+  flex: 1;
+  align-content: start;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 18px;
 }
@@ -823,6 +827,8 @@ button, input, select, textarea { font-family: inherit; }
   gap: 14px;
   color: var(--text-muted);
 }
+.favorites-grid:has(.empty-state),
+.favorites-list:has(.empty-state) { grid-template-rows: 1fr; }
 .empty-state-icon { font-size: 4rem; opacity: 0.3; }
 .empty-state-title { font-size: 1.2rem; font-weight: 700; color: var(--text); }
 .empty-state-sub { font-size: 0.9rem; max-width: 360px; }
@@ -1031,7 +1037,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 /* ===== RESPONSIVE — MOBILE ===== */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   /* Show mobile nav; search bar is toggled by JS */
   .mobile-nav { display: flex; }
 
